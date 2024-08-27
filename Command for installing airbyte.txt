@@ -1,6 +1,0 @@
-run this command before running git clone of airbyte:----
-git config --global core.longpaths true
-
-
-run below command in git bash:-------
-./run-ab-platform.sh
