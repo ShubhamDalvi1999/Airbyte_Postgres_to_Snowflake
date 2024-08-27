@@ -1,5 +1,6 @@
+
 <h2 align="center">
-  Welcome to My PySpark Text to CSV ETL Project!
+  Welcome to My Docker-Hosted Postgres to Snowflake Data Transfer Project!
   <img src="https://media.giphy.com/media/hvRJCLFzcasrR4ia7z/giphy.gif" width="28">
 </h2>
 
@@ -48,117 +49,96 @@
 
 ## Skills and Technologies
 
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Airbyte](https://img.shields.io/badge/Airbyte-000000?style=for-the-badge&logo=airbyte&logoColor=white)
+![Snowflake](https://img.shields.io/badge/Snowflake-29B5E8?style=for-the-badge&logo=snowflake&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![PySpark](https://img.shields.io/badge/PySpark-E25A1C?style=for-the-badge&logo=apache-spark&logoColor=white)
-![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)
-![Matplotlib](https://img.shields.io/badge/Matplotlib-013243?style=for-the-badge&logo=matplotlib&logoColor=white)
-![Jupyter](https://img.shields.io/badge/Jupyter-F37626?style=for-the-badge&logo=jupyter&logoColor=white)
-![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
 ![VSCode](https://img.shields.io/badge/Visual_Studio-0078d7?style=for-the-badge&logo=visual%20studio&logoColor=white)
 
 <br/>
 
 ## Project Overview
 
-This project focuses on converting text data into a CSV format using PySpark, with an ETL (Extract, Transform, Load) process that includes exploratory data analysis (EDA). The objective is to transform raw text data into a structured CSV format and perform various analyses to extract valuable insights.
+This project demonstrates how to set up a PostgreSQL database hosted on Docker, create tables, and transfer data from PostgreSQL to Snowflake using Airbyte. The project includes setting up the environment, creating the database schema, and automating the data transfer process.
 
 ## Table of Contents
 - [Technologies Used](#technologies-used)
 - [Skills Demonstrated](#skills-demonstrated)
-- [Data Extraction](#data-extraction)
-- [Data Transformation](#data-transformation)
-- [Exploratory Data Analysis (EDA)](#exploratory-data-analysis-eda)
-- [Saving Results](#saving-results)
+- [Setup PostgreSQL on Docker](#setup-postgresql-on-docker)
+- [Creating the Database and Tables](#creating-the-database-and-tables)
+- [Configuring Airbyte](#configuring-airbyte)
+- [Data Transfer to Snowflake](#data-transfer-to-snowflake)
 - [Usage Instructions](#usage-instructions)
 
 ## Technologies Used
-- **PySpark**: For distributed data processing.
-- **Pandas**: For data manipulation and transformation.
-- **Matplotlib**: For data visualization.
-- **Jupyter Notebook**: For interactive data analysis.
+- **PostgreSQL**: For database management.
+- **Docker**: To containerize and host the PostgreSQL instance.
+- **Airbyte**: To extract and load data from PostgreSQL to Snowflake.
+- **Snowflake**: For data warehousing.
+- **Python**: For scripting and automation.
 
 ## Skills Demonstrated
-- **Data Engineering**: Efficient handling and processing of text data.
-- **PySpark**: Advanced usage of PySpark DataFrame operations and SQL functions.
-- **Data Transformation**: Converting and cleaning text data for analysis.
-- **Exploratory Data Analysis (EDA)**: Understanding data distributions and patterns.
-- **Visualization**: Plotting data distributions for insights.
-- **Performance Optimization**: Managing large datasets efficiently.
+- **Data Engineering**: Setting up and managing a PostgreSQL database in Docker.
+- **Docker**: Containerizing services for ease of use and portability.
+- **ETL Processes**: Automating data transfer from PostgreSQL to Snowflake.
+- **Airbyte Configuration**: Setting up and managing data connectors.
 
-## Data Extraction
+## Setup PostgreSQL on Docker
 ### Initial Setup
-The project begins with the initialization of PySpark and reading the text file.
+Start by pulling the PostgreSQL Docker image and running a container.
 
-```python
-from pyspark.sql import SparkSession
-
-spark = SparkSession.builder.appName("Doc_reader").getOrCreate()
-
-df = spark.read.text("DSA-For-Data-Engineer.txt")
+```bash
+docker pull postgres
+docker run --name my_postgres -e POSTGRES_PASSWORD=mysecretpassword -d postgres
 ```
 
-## Data Transformation
+### Accessing the PostgreSQL Database
+Connect to the PostgreSQL instance running inside the Docker container.
 
-### Extracting Topics and Questions
-Transforming text data to extract topics and questions into separate columns.
-
-```python
-from pyspark.sql.functions import when, col, rlike
-
-transformed_df = df.withColumn("Topic", when(col("value").rlike(r"^[ A-Z]"), col("value")).otherwise(None)) \
-                    .withColumn("Questions", when(col("value").rlike(r"^\d+\."), col("value")).otherwise(None))
-```
-## Exploratory Data Analysis (EDA)
-### Summary Statistics
-Generating summary statistics to understand the data better.
-
-```python
-from pyspark.sql.functions import isnan, count
-
-eda_df = transformed_df.select([count(col(c)).alias(c) for c in transformed_df.columns])
-eda_df.show()
+```bash
+docker exec -it my_postgres psql -U postgres
 ```
 
-## Null Value Analysis
-### Calculating and displaying the percentage of null values in each column.
+## Creating the Database and Tables
 
-```python
-eda_null_df = transformed_df.select([count(when(isnan(c) | col(c).isNull(), c)).alias(f"{c}_null_val") for c in transformed_df.columns])
-eda_null_df.show()
+### Creating a Database
+Create a new database for storing your data.
 
-union_df = eda_df.union(eda_null_df)
-union_df.show()
-
-total_rows_count = transformed_df.count()
-null_percentages = []
-
-for c in transformed_df.columns:
-    null_count = transformed_df.filter(col(c).isNull() | isnan(c)).count()
-    null_percent = (null_count / total_rows_count) * 100
-    null_percentages.append((c, round(null_percent, 3)))
-
-percent_df = spark.createDataFrame(null_percentages, ["Column", "Null_Percentages"])
-percent_df.show()
+```sql
+CREATE DATABASE my_database;
 ```
-## Cleaning and Saving Results
-### Cleaning Data
-Dropping the original column and replacing None values with empty strings.
 
-```python
-transformed_df = transformed_df.drop(col("value"))
-transformed_df = transformed_df.fillna("")
-```
-## Saving the Cleaned Data
-### Saving the cleaned DataFrame to a CSV file.
+### Creating Tables
+Define the schema and create tables within the database.
 
-```python
-transformed_df.write.csv('DSA_practice.csv', header=True, mode='overwrite')
+```sql
+CREATE TABLE transactions (
+    transaction_id SERIAL PRIMARY KEY,
+    amount DECIMAL(10, 2),
+    transaction_date DATE
+);
 ```
+
+## Configuring Airbyte
+
+### Setting Up Airbyte
+Install and run Airbyte to handle the data transfer.
+
+```bash
+docker-compose up -d
+```
+
+### Connecting PostgreSQL and Snowflake
+Create a new connection in Airbyte, specifying PostgreSQL as the source and Snowflake as the destination. Map the tables and fields as needed.
+
+## Data Transfer to Snowflake
+### Running the Sync
+Trigger the data sync from PostgreSQL to Snowflake using Airbyte's interface or API.
+
 ## Usage Instructions
-1. Ensure PySpark and other dependencies are installed.
-2. Place your text data file in the appropriate directory.
-3. Run the provided code step-by-step in a Jupyter notebook or a PySpark environment.
-4. Review the generated CSV file and EDA outputs for insights.
-
-
-This `README.md` file provides a comprehensive overview of your project, detailing the data transformation, EDA, and cleaning steps along with usage instructions.
+1. Ensure Docker and Airbyte are installed and running.
+2. Set up PostgreSQL on Docker using the provided commands.
+3. Create the necessary tables in PostgreSQL.
+4. Configure Airbyte with the appropriate source and destination settings.
+5. Trigger the data sync and verify the results in Snowflake.
